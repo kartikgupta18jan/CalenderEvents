@@ -10,14 +10,18 @@ import CoreData
 
 class CalendarViewModel: ObservableObject {
     @Published var selectedDate: Date = Date()
+    @Published var isLoading: Bool = true
     private let context: NSManagedObjectContext
 
     init(context: NSManagedObjectContext) {
         self.context = context
 
         if !UserDefaults.standard.bool(forKey: Constants.Content.UserDefaultPreloadKey) {
+            self.isLoading = true
             preloadEvents()
             UserDefaults.standard.set(true, forKey: Constants.Content.UserDefaultPreloadKey)
+        } else {
+            isLoading = false
         }
     }
 
@@ -36,7 +40,15 @@ class CalendarViewModel: ObservableObject {
             entity.isRecurring = Bool.random()
         }
 
-        try? context.save()
+        do {
+            try self.context.save()
+        } catch {
+            print("Failed to save preloaded events: \(error)")
+        }
+
+        DispatchQueue.main.async {
+            self.isLoading = false
+        }
     }
 
     func eventCount(for date: Date) -> Int {
